@@ -17,28 +17,28 @@ public class Cliente {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @NotBlank(message = "O nome é obrigatório")
-    @Size(min = 2, max = 255, message = "O nome deve ter entre 2 e 255 caracteres")
+    @NotBlank
+    @Size(min = 2, max = 255)
     @Column(name = "nome_cliente", nullable = false, length = 255)
     private String nome;
 
-    @NotBlank(message = "O CPF é obrigatório")
-    @Size(min = 11, max = 11, message = "O CPF deve ter 11 caracteres")
+    @NotBlank
+    @Size(min = 11, max = 11)
     @Column(name = "cpf", nullable = false , length = 11)
     private String cpf;
 
-    @NotBlank(message = "O telefone é obrigatório")
-    @Size(min = 8, max = 12, message = "O telefone deve ter de 8 a 12 caracteres")
+    @NotBlank
+    @Size(min = 8, max = 12)
     @Column(name = "telefone", length = 12)
     private String telefone;
 
-    @NotBlank(message = "O e-mail é obrigatório")
-    @Size(max = 100, message = "O e-mail deve ter no máximo 100 caracteres")
-    @Email(message = "O e-mail deve ser válido")
+    @NotBlank
+    @Size(max = 100)
+    @Email
     @Column(name = "email" , length = 100)
     private String email;
 
-    @NotNull(message = "A data de nascimento é obrigatória")
+    @NotNull
     @Column(name = "dt_nascimento")
     private LocalDate dtNascimento;
 

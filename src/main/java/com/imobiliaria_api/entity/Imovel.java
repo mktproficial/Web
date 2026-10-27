@@ -15,43 +15,43 @@ public class Imovel {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @NotBlank(message = "O tipo do imovel é obrigatório")
-    @Size(min = 2, max = 50, message = "O tipo dever ter entre 2 a 50 caracteres")
+    @NotBlank
+    @Size(min = 2, max = 50)
     @Column(name = "tipo_imovel", nullable = false, length = 50)
     private String tipo_imovel;
 
-    @NotBlank(message = "O endereco é obrigatório")
-    @Size(min = 2, max = 255, message = "O endereco deve ter entre 2 e 255 caracteres")
+    @NotBlank
+    @Size(min = 2, max = 255)
     @Column(name = "endereco", nullable = false, length = 255)
     private String endereco;
 
-    @NotBlank(message = "O CEP é obrigatório")
-    @Size(min = 8, max = 8, message = "O CEP deve ter exatamente 8 caracteres")
-    @Pattern(regexp = "\\d{8}", message = "O CEP deve conter apenas números")
+    @NotBlank
+    @Size(min = 8, max = 8)
+    @Pattern(regexp = "\\d{8}")
     @Column(name = "cep")
     private String cep;
 
-    @NotNull(message = "A quantidade de dormitórios é obrigatório")
-    @Min(value = 0, message = "A quantidade de dormitorios não pode ser negativa")
+    @NotNull
+    @Min(value = 0)
     @Column(name = "dormitorios")
     private Integer dormitorios;
 
-    @NotNull(message = "A quantidade de banheiros é obrigatório")
-    @Min(value = 0, message = "A quantidade de banheiros não pode ser negativa")
+    @NotNull
+    @Min(value = 0)
     @Column(name = "banheiros")
     private Integer banheiros;
 
-    @NotNull(message = "A quantidade de suites é obrigatório")
-    @Min(value = 0, message = "A quantidade de suites não pode ser negativa")
+    @NotNull
+    @Min(value = 0)
     @Column(name = "suites")
     private Integer suites;
 
-    @NotNull(message = "A quantidade de metragem é obrigatório")
-    @Min(value = 1, message = "A metragem deve ser maior que zero")
+    @NotNull
+    @Min(value = 1)
     @Column(name = "metragem")
     private Integer metragem;
 
-    @Min(value = 1, message = "A valor deve ser maior que zero")
+    @Min(value = 1)
     @Column(name = "valor_aluguel_sug", precision = 10, scale = 2)
     private BigDecimal valorAluguelSug;
 

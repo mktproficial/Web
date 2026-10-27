@@ -3,6 +3,10 @@ package com.imobiliaria_api.controller;
 import com.imobiliaria_api.entity.Imovel;
 import com.imobiliaria_api.service.ImovelService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +31,39 @@ public class ImovelController {
     @GetMapping("/{id}")
     public ResponseEntity<Optional<Imovel>> buscarPorId(@PathVariable Integer id) {
         return ResponseEntity.ok(imovelService.buscarPorId(id));
+    }
+
+    @GetMapping("/pesquisar")
+    public ResponseEntity<List<Imovel>> pesquisaByExample(
+            @RequestParam(required = false) String tipo_imovel,
+            @RequestParam(required = false) String endereco,
+            @RequestParam(required = false) String cep,
+            @RequestParam(required = false) Integer dormitorios,
+            @RequestParam(required = false) Integer banheiros,
+            @RequestParam(required = false) Integer suites,
+            @RequestParam(required = false) Integer metragem) {
+
+        return ResponseEntity.ok(
+                imovelService.pesquisaByExample(
+                        tipo_imovel,
+                        endereco,
+                        cep,
+                        dormitorios,
+                        banheiros,
+                        suites,
+                        metragem
+                )
+        );
+    }
+
+    @GetMapping("/pagina")
+    public Page<Imovel> listarPaginado(
+            @PageableDefault(
+                    size = 10,
+                    sort = "id",
+                    direction = Sort.Direction.ASC
+            ) Pageable pageable) {
+        return imovelService.listarPaginado(pageable);
     }
 
     @PostMapping
