@@ -1,58 +1,41 @@
 package com.imobiliaria_api.service;
 
+import com.imobiliaria_api.exception.EntidadeNaoEncontradaException;
 import com.imobiliaria_api.entity.Aluguel;
-import com.imobiliaria_api.entity.Locacao;
 import com.imobiliaria_api.repository.AluguelRepository;
-import com.imobiliaria_api.repository.LocacaoRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Optional;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AluguelService {
 
-    private final AluguelRepository aluguelRepository;
-    private final LocacaoRepository locacaoRepository;
+    private final AluguelRepository repository;
 
-    public AluguelService(
-            AluguelRepository aluguelRepository,
-            LocacaoRepository locacaoRepository) {
-
-        this.aluguelRepository = aluguelRepository;
-        this.locacaoRepository = locacaoRepository;
+    public AluguelService(AluguelRepository repository) {
+        this.repository = repository;
     }
 
-    public List<Aluguel> listarTodos() {
-        return aluguelRepository.findAll();
+    @Transactional(readOnly = true)
+    public Page<Aluguel> listar(Integer locacaoId, Integer clienteIdRestricao, Pageable pageable) {
+        return repository.buscar(locacaoId, clienteIdRestricao, pageable);
     }
 
-    public Optional<Aluguel> buscarPorId(Integer id) {
-        return aluguelRepository.findById(id);
+    @Transactional(readOnly = true)
+    public Aluguel buscarOuFalhar(Integer id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new EntidadeNaoEncontradaException("Aluguel não encontrado"));
     }
 
+    @Transactional
     public Aluguel salvar(Aluguel aluguel) {
-
-        System.out.println("ALUGUEL RECEBIDO: " + aluguel);
-        System.out.println("LOCAÇÃO: " + aluguel.getLocacao());
-
-        if (aluguel.getLocacao() == null ||
-                aluguel.getLocacao().getId() == null) {
-
-            throw new RuntimeException("Locação é obrigatória");
-        }
-
-        Locacao locacao = locacaoRepository
-                .findById(aluguel.getLocacao().getId())
-                .orElseThrow(() ->
-                        new RuntimeException("Locação não encontrada"));
-
-        aluguel.setLocacao(locacao);
-
-        return aluguelRepository.save(aluguel);
+        return repository.save(aluguel);
     }
 
-    public void excluir(Integer id) {
-        aluguelRepository.deleteById(id);
+    @Transactional
+    public void remover(Integer id) {
+        Aluguel aluguel = buscarOuFalhar(id);
+        repository.delete(aluguel);
     }
 }

@@ -1,4 +1,4 @@
-package com.imobiliaria_api.handler;
+package com.imobiliaria_api.api.controlleradvise;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -21,9 +21,7 @@ public class ErrosDeValidacao {
     }
 
     public String getDataHora() {
-        DateTimeFormatter formatter =
-                DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
         return dataHora.format(formatter);
     }
 

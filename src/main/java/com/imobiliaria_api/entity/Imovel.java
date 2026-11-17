@@ -18,7 +18,7 @@ public class Imovel {
     @NotBlank
     @Size(min = 2, max = 50)
     @Column(name = "tipo_imovel", nullable = false, length = 50)
-    private String tipo_imovel;
+    private String tipoImovel;
 
     @NotBlank
     @Size(min = 2, max = 255)
@@ -65,12 +65,12 @@ public class Imovel {
         this.id = id;
     }
 
-    public String getTipo_imovel() {
-        return tipo_imovel;
+    public String getTipoImovel() {
+        return tipoImovel;
     }
 
-    public void setTipo_imovel(String tipo_imovel) {
-        this.tipo_imovel = tipo_imovel;
+    public void setTipoImovel(String tipoImovel) {
+        this.tipoImovel = tipoImovel;
     }
 
     public String getEndereco() {
@@ -153,7 +153,7 @@ public class Imovel {
     public String toString() {
         return "Imovel{" +
                 "id=" + id +
-                ", tipo_imovel='" + tipo_imovel + '\'' +
+                ", tipoImovel='" + tipoImovel + '\'' +
                 ", endereco='" + endereco + '\'' +
                 ", cep='" + cep + '\'' +
                 ", dormitorios=" + dormitorios +

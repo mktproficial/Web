@@ -1,128 +1,83 @@
 package com.imobiliaria_api.service;
 
-import com.imobiliaria_api.entity.Cliente;
-import com.imobiliaria_api.entity.Imovel;
+import com.imobiliaria_api.exception.EntidadeNaoEncontradaException;
+import com.imobiliaria_api.exception.NegocioException;
 import com.imobiliaria_api.entity.Locacao;
-import com.imobiliaria_api.repository.ClienteRepository;
-import com.imobiliaria_api.repository.ImovelRepository;
 import com.imobiliaria_api.repository.LocacaoRepository;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Optional;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class LocacaoService {
 
-    private final LocacaoRepository locacaoRepository;
-    private final ClienteRepository clienteRepository;
-    private final ImovelRepository imovelRepository;
+    private final LocacaoRepository repository;
 
-    public LocacaoService(
-            LocacaoRepository locacaoRepository,
-            ClienteRepository clienteRepository,
-            ImovelRepository imovelRepository) {
-
-        this.locacaoRepository = locacaoRepository;
-        this.clienteRepository = clienteRepository;
-        this.imovelRepository = imovelRepository;
+    public LocacaoService(LocacaoRepository repository) {
+        this.repository = repository;
     }
 
-    public List<Locacao> listarTodos() {
-        return locacaoRepository.findAll();
+    @Transactional(readOnly = true)
+    public Page<Locacao> listar(Integer clienteIdRestricao, String nomeInquilino, Boolean ativo, Pageable pageable) {
+        return repository.buscar(clienteIdRestricao, nomeInquilino, ativo, pageable);
     }
 
-    public Optional<Locacao> buscarPorId(Integer id) {
-        return locacaoRepository.findById(id);
+    @Transactional(readOnly = true)
+    public Locacao buscarOuFalhar(Integer id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new EntidadeNaoEncontradaException("Locação não encontrada"));
     }
 
-
+    @Transactional
     public Locacao salvar(Locacao locacao) {
+        validarPeriodo(locacao);
 
-        if (locacao.getCliente() == null ||
-                locacao.getCliente().getId() == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "Cliente é obrigatório");
+        if (locacao.getAtivo() == null) {
+            locacao.setAtivo(true);
         }
 
-        if (locacao.getImovel() == null ||
-                locacao.getImovel().getId() == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "Imóvel é obrigatório");
-        }
-
-        LocalDate inicio = locacao.getDataInicio();
-        LocalDate fim = locacao.getDataFim();
-
-        if (inicio == null || fim == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "As datas de início e fim são obrigatórias");
-        }
-
-        if (!fim.isAfter(inicio)) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "A data final deve ser posterior à data inicial");
-        }
-
-        Cliente cliente = clienteRepository.findById(
-                locacao.getCliente().getId()
-        ).orElseThrow(() -> new ResponseStatusException(
-                HttpStatus.NOT_FOUND, "Cliente não encontrado"));
-
-        Imovel imovel = imovelRepository.findById(
-                locacao.getImovel().getId()
-        ).orElseThrow(() -> new ResponseStatusException(
-                HttpStatus.NOT_FOUND, "Imóvel não encontrado"));
-
-        BigDecimal valorDiaria = imovel.getValorAluguelSug();
-
-        if (valorDiaria == null ||
-                valorDiaria.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "O imóvel não possui um valor de diária válido");
-        }
-
-        long diarias = ChronoUnit.DAYS.between(inicio, fim);
-
-        BigDecimal valorTotal = valorDiaria.multiply(
-                BigDecimal.valueOf(diarias)
-        );
-
-        // O valor enviado pelo cliente é ignorado.
-        locacao.setValorAluguel(valorTotal);
-        locacao.setCliente(cliente);
-        locacao.setImovel(imovel);
-
-        // Ao cadastrar ou confirmar, verificar disponibilidade.
         if (Boolean.TRUE.equals(locacao.getAtivo())) {
-            boolean conflito = locacaoRepository.existeConflito(
-                    imovel.getId(),
-                    inicio,
-                    fim,
-                    locacao.getId()
-            );
-
-            if (conflito) {
-                throw new ResponseStatusException(
-                        HttpStatus.CONFLICT,
-                        "O imóvel já possui uma locação confirmada "
-                                + "para o período solicitado");
-            }
+            validarDisponibilidade(locacao);
         }
 
-        return locacaoRepository.save(locacao);
+        return repository.save(locacao);
     }
 
+    @Transactional
+    public Locacao alterarAtivacao(Integer id, boolean ativo) {
+        Locacao locacao = buscarOuFalhar(id);
 
-    public void excluir(Integer id) {
-        locacaoRepository.deleteById(id);
+        if (ativo) {
+            validarDisponibilidade(locacao);
+        }
+
+        locacao.setAtivo(ativo);
+        return locacao;
+    }
+
+    @Transactional
+    public void remover(Integer id) {
+        Locacao locacao = buscarOuFalhar(id);
+        repository.delete(locacao);
+    }
+
+    private void validarDisponibilidade(Locacao locacao) {
+        if (repository.existeSobreposicao(
+                locacao.getImovel().getId(),
+                locacao.getDataInicio(),
+                locacao.getDataFim(),
+                locacao.getId())) {
+            throw new NegocioException("O imóvel já possui uma locação ativa no período informado");
+        }
+    }
+
+    private void validarPeriodo(Locacao locacao) {
+        if (locacao.getDataInicio() == null || locacao.getDataFim() == null) {
+            throw new NegocioException("As datas de início e fim são obrigatórias");
+        }
+        if (!locacao.getDataFim().isAfter(locacao.getDataInicio())) {
+            throw new NegocioException("A data de fim deve ser posterior à data de início");
+        }
     }
 }

@@ -1,121 +1,61 @@
 package com.imobiliaria_api.service;
 
+import com.imobiliaria_api.filtro.ImovelFiltro;
+import com.imobiliaria_api.exception.EntidadeNaoEncontradaException;
 import com.imobiliaria_api.entity.Imovel;
 import com.imobiliaria_api.repository.ImovelRepository;
-import com.imobiliaria_api.repository.LocacaoRepository;
-import jakarta.validation.Valid;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ImovelService {
 
-    private final ImovelRepository imovelRepository;
-    private final LocacaoRepository locacaoRepository;
+    private final ImovelRepository repository;
 
-    public ImovelService(
-            ImovelRepository imovelRepository,
-            LocacaoRepository locacaoRepository) {
-        this.imovelRepository = imovelRepository;
-        this.locacaoRepository = locacaoRepository;
+    public ImovelService(ImovelRepository repository) {
+        this.repository = repository;
     }
 
-    public List<Imovel> listarTodos() {
-        return imovelRepository.findAll();
-    }
+    @Transactional(readOnly = true)
+    public Page<Imovel> listar(ImovelFiltro filtro, Pageable pageable) {
+        Imovel probe = new Imovel();
+        probe.setTipoImovel(filtro.getTipoImovel());
+        probe.setEndereco(filtro.getEndereco());
+        probe.setCep(filtro.getCep());
+        probe.setDormitorios(filtro.getDormitorios());
+        probe.setBanheiros(filtro.getBanheiros());
+        probe.setSuites(filtro.getSuites());
+        probe.setMetragem(filtro.getMetragem());
+        probe.setValorAluguelSug(filtro.getValorAluguelSug());
+        probe.setObs(filtro.getObs());
 
-    public Optional<Imovel> buscarPorId(Integer id) {
-        return imovelRepository.findById(id);
-    }
-
-    public Page<Imovel> listarPaginado(Pageable pageable) {
-        return imovelRepository.findAll(pageable);
-    }
-
-
-    public List<Imovel> pesquisaByExample(
-            String tipo_imovel,
-            String endereco,
-            String cep,
-            Integer dormitorios,
-            Integer banheiros,
-            Integer suites,
-            Integer metragem) {
-
-        var imovel = new Imovel();
-
-        imovel.setTipo_imovel(tipo_imovel);
-        imovel.setEndereco(endereco);
-        imovel.setCep(cep);
-        imovel.setDormitorios(dormitorios);
-        imovel.setBanheiros(banheiros);
-        imovel.setSuites(suites);
-        imovel.setMetragem(metragem);
-
-        ExampleMatcher matcher = ExampleMatcher
-                .matchingAll()
+        ExampleMatcher matcher = ExampleMatcher.matchingAll()
                 .withIgnoreNullValues()
                 .withIgnoreCase()
-                .withStringMatcher(
-                        ExampleMatcher.StringMatcher.CONTAINING)
-                .withIgnorePaths("id", "valorAluguelSug", "obs");
+                .withStringMatcher(ExampleMatcher.StringMatcher.CONTAINING)
+                .withMatcher("cep", ExampleMatcher.GenericPropertyMatchers.exact());
 
-        Example<Imovel> imovelExample = Example.of(imovel, matcher);
-
-        return imovelRepository.findAll(imovelExample);
+        return repository.findAll(Example.of(probe, matcher), pageable);
     }
 
+    @Transactional(readOnly = true)
+    public Imovel buscarOuFalhar(Integer id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new EntidadeNaoEncontradaException("Imóvel não encontrado"));
+    }
 
+    @Transactional
     public Imovel salvar(Imovel imovel) {
-        return imovelRepository.save(imovel);
+        return repository.save(imovel);
     }
 
-
-    public void excluir(Integer id) {
-
-        Imovel imovel = imovelRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Imóvel não encontrado"));
-
-        boolean possuiLocacaoAtivaOuFutura =
-                locacaoRepository
-                        .existsByImovel_IdAndAtivoTrueAndDataFimGreaterThanEqual(
-                                id, LocalDate.now());
-
-        if (possuiLocacaoAtivaOuFutura) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Não é possível excluir o imóvel: "
-                            + "existe uma locação ativa ou futura vinculada a ele");
-        }
-
-        imovelRepository.delete(imovel);
-    }
-
-
-    public Imovel atualizar(Integer id, @Valid Imovel imovel) {
-        Imovel imovelExistente = imovelRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Imovel não encontrado"));
-
-        imovelExistente.setTipo_imovel(imovel.getTipo_imovel());
-        imovelExistente.setEndereco(imovel.getEndereco());
-        imovelExistente.setCep(imovel.getCep());
-        imovelExistente.setDormitorios(imovel.getDormitorios());
-        imovelExistente.setBanheiros(imovel.getBanheiros());
-        imovelExistente.setSuites(imovel.getSuites());
-        imovelExistente.setMetragem(imovel.getMetragem());
-        imovelExistente.setValorAluguelSug(imovel.getValorAluguelSug());
-        imovelExistente.setObs(imovel.getObs());
-        return imovelRepository.save(imovelExistente);
+    @Transactional
+    public void remover(Integer id) {
+        Imovel imovel = buscarOuFalhar(id);
+        repository.delete(imovel);
     }
 }

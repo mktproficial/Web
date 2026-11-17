@@ -1,47 +1,54 @@
 package com.imobiliaria_api.service;
 
+import com.imobiliaria_api.exception.EntidadeNaoEncontradaException;
+import com.imobiliaria_api.exception.NegocioException;
 import com.imobiliaria_api.entity.Cliente;
 import com.imobiliaria_api.repository.ClienteRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Optional;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 public class ClienteService {
 
-    private final ClienteRepository clienteRepository;
+    private final ClienteRepository repository;
 
-    public ClienteService(ClienteRepository clienteRepository) {
-        this.clienteRepository = clienteRepository;
+    public ClienteService(ClienteRepository repository) {
+        this.repository = repository;
     }
 
-    public List<Cliente> listarTodos() {
-        return clienteRepository.findAll();
+    @Transactional(readOnly = true)
+    public Page<Cliente> listar(String nome, Pageable pageable) {
+        if (StringUtils.hasText(nome)) {
+            return repository.findByNomeContainingIgnoreCase(nome, pageable);
+        }
+        return repository.findAll(pageable);
     }
 
-    public Optional<Cliente> buscarPorId(Integer id) {
-        return clienteRepository.findById(id);
+    @Transactional(readOnly = true)
+    public Cliente buscarOuFalhar(Integer id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new EntidadeNaoEncontradaException("Cliente não encontrado"));
     }
 
+    @Transactional
     public Cliente salvar(Cliente cliente) {
-        return clienteRepository.save(cliente);
+        boolean cpfEmUso = cliente.getId() == null
+                ? repository.existsByCpf(cliente.getCpf())
+                : repository.existsByCpfAndIdNot(cliente.getCpf(), cliente.getId());
+
+        if (cpfEmUso) {
+            throw new NegocioException("Já existe um cliente cadastrado com este CPF");
+        }
+
+        return repository.save(cliente);
     }
 
-    public Cliente atualizar(Integer id, Cliente cliente) {
-        Cliente clienteExistente = clienteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
-
-        clienteExistente.setNome(cliente.getNome());
-        clienteExistente.setCpf(cliente.getCpf());
-        clienteExistente.setTelefone(cliente.getTelefone());
-        clienteExistente.setEmail(cliente.getEmail());
-        clienteExistente.setDtNascimento(cliente.getDtNascimento());
-
-        return clienteRepository.save(clienteExistente);
-    }
-
-    public void excluir(Integer id) {
-        clienteRepository.deleteById(id);
+    @Transactional
+    public void remover(Integer id) {
+        Cliente cliente = buscarOuFalhar(id);
+        repository.delete(cliente);
     }
 }
